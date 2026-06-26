@@ -1,0 +1,7 @@
+.git
+.agents
+.codex
+work
+node_modules
+npm-debug.log
+outputs
