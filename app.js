@@ -25,6 +25,7 @@ const els = {
   accountName: $("accountName"),
   masterPassword: $("masterPassword"),
   toggleMaster: $("toggleMaster"),
+  toggleMasterIcon: $("toggleMasterIcon"),
   unlockButton: $("unlockButton"),
   accountLabel: $("accountLabel"),
   themeButton: $("themeButton"),
@@ -59,30 +60,28 @@ const els = {
   confirmText: $("confirmText"),
   confirmCancel: $("confirmCancel"),
   confirmOk: $("confirmOk"),
+  strengthMeter: $("strengthMeter"),
+  strengthLabel: $("strengthLabel"),
+  sb1: $("sb1"), sb2: $("sb2"), sb3: $("sb3"), sb4: $("sb4"),
 };
 
+// ── SVG ICONS ──
+const EYE_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_CLOSED = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+// ── CRYPTO ──
 function getStoredVault() {
   const raw = localStorage.getItem(STORAGE_KEY);
   return raw ? JSON.parse(raw) : null;
 }
-
 function bytesToBase64(bytes) {
   return btoa(String.fromCharCode(...new Uint8Array(bytes)));
 }
-
 function base64ToBytes(value) {
-  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+  return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
 }
-
 async function deriveKey(password, salt) {
-  const material = await crypto.subtle.importKey(
-    "raw",
-    textEncoder.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveKey"]
-  );
-
+  const material = await crypto.subtle.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt, iterations: 260000, hash: "SHA-256" },
     material,
@@ -91,7 +90,6 @@ async function deriveKey(password, salt) {
     ["encrypt", "decrypt"]
   );
 }
-
 async function encryptVault() {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encrypted = await crypto.subtle.encrypt(
@@ -99,7 +97,6 @@ async function encryptVault() {
     state.key,
     textEncoder.encode(JSON.stringify(state.vault))
   );
-
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     version: 1,
     accountName: state.accountName,
@@ -109,7 +106,6 @@ async function encryptVault() {
     updatedAt: new Date().toISOString(),
   }));
 }
-
 async function decryptVault(password, stored) {
   const salt = base64ToBytes(stored.salt);
   const key = await deriveKey(password, salt);
@@ -121,32 +117,47 @@ async function decryptVault(password, stored) {
   return { key, salt, vault: JSON.parse(textDecoder.decode(decrypted)) };
 }
 
-function uid() {
-  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-}
-
-function now() {
-  return new Date().toISOString();
-}
-
-function activeEntry() {
-  return state.vault.entries.find((entry) => entry.id === state.activeId) || null;
-}
-
+// ── UTILS ──
+function uid() { return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`; }
+function now() { return new Date().toISOString(); }
+function activeEntry() { return state.vault.entries.find((e) => e.id === state.activeId) || null; }
 function filteredEntries() {
   const needle = state.search.trim().toLowerCase();
   return state.vault.entries
-    .filter((entry) => state.filter === "all" || entry.type === state.filter)
-    .filter((entry) => {
-      if (!needle) return true;
-      return [entry.title, entry.username, entry.url, entry.notes]
-        .join(" ")
-        .toLowerCase()
-        .includes(needle);
-    })
+    .filter((e) => state.filter === "all" || e.type === state.filter)
+    .filter((e) => !needle || [e.title, e.username, e.url, e.notes].join(" ").toLowerCase().includes(needle))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+// ── PASSWORD STRENGTH ──
+function passwordStrength(pw) {
+  if (!pw) return 0;
+  let score = 0;
+  if (pw.length >= 10) score++;
+  if (pw.length >= 16) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return Math.min(4, Math.round(score * 4 / 5));
+}
+
+function updateStrengthMeter(pw) {
+  if (!pw) {
+    els.strengthMeter.style.display = "none";
+    return;
+  }
+  els.strengthMeter.style.display = "";
+  const level = passwordStrength(pw);
+  const labels = ["", "Schwach", "Mäßig", "Gut", "Stark"];
+  const cls = `filled-${level}`;
+  [els.sb1, els.sb2, els.sb3, els.sb4].forEach((bar, i) => {
+    bar.className = "strength-bar " + (i < level ? cls : "");
+  });
+  els.strengthLabel.textContent = labels[level] || "";
+  els.strengthLabel.style.color = level <= 1 ? "var(--danger)" : level === 2 ? "#F59E0B" : "var(--success)";
+}
+
+// ── RENDER ──
 function renderList() {
   const entries = filteredEntries();
   els.entryCount.textContent = String(entries.length);
@@ -161,48 +172,45 @@ function renderList() {
   }
 
   const sections = state.filter === "all"
-    ? [
-        { title: "Passwörter", type: "password" },
-        { title: "Notizen", type: "note" },
-      ]
-    : [
-        { title: state.filter === "password" ? "Passwörter" : "Notizen", type: state.filter },
-      ];
+    ? [{ title: "Passwörter", type: "password" }, { title: "Notizen", type: "note" }]
+    : [{ title: state.filter === "password" ? "Passwörter" : "Notizen", type: state.filter }];
 
   for (const section of sections) {
-    const sectionEntries = entries.filter((entry) => entry.type === section.type);
+    const sectionEntries = entries.filter((e) => e.type === section.type);
     if (!sectionEntries.length) continue;
-
     const wrap = document.createElement("section");
     wrap.className = "entry-section";
     const heading = document.createElement("h4");
     heading.textContent = section.title;
     wrap.append(heading);
-
-    for (const entry of sectionEntries) {
-      wrap.append(createEntryCard(entry));
-    }
-
+    for (const entry of sectionEntries) wrap.append(createEntryCard(entry));
     els.entryList.append(wrap);
   }
 }
 
+const LOCK_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+const NOTE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+
 function createEntryCard(entry) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `entry-card ${entry.id === state.activeId ? "active" : ""}`;
-    button.dataset.id = entry.id;
-    button.innerHTML = `
-      <span class="type-pill ${entry.type === "note" ? "note" : ""}">${entry.type === "note" ? "Notiz" : "Passwort"}</span>
-      <strong></strong>
-      <span></span>
-    `;
-    button.querySelector("strong").textContent = entry.title || "Ohne Titel";
-    button.querySelector("span:last-child").textContent = entry.type === "note"
-      ? (entry.notes || "Leere Notiz").slice(0, 90)
-      : (entry.username || entry.url || "Kein Login hinterlegt");
-    button.addEventListener("click", () => selectEntry(entry.id));
-    return button;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `entry-card ${entry.id === state.activeId ? "active" : ""}`;
+  button.dataset.id = entry.id;
+  const pillClass = entry.type === "note" ? "note" : "";
+  const pillIcon = entry.type === "note" ? NOTE_ICON : LOCK_ICON;
+  const pillLabel = entry.type === "note" ? "Notiz" : "Passwort";
+  const sub = entry.type === "note"
+    ? (entry.notes || "Leere Notiz").slice(0, 80)
+    : (entry.username || entry.url || "Kein Login hinterlegt");
+  button.innerHTML = `
+    <span class="type-pill ${pillClass}">${pillIcon}${pillLabel}</span>
+    <strong></strong>
+    <span class="card-sub"></span>
+  `;
+  button.querySelector("strong").textContent = entry.title || "Ohne Titel";
+  button.querySelector(".card-sub").textContent = sub;
+  button.addEventListener("click", () => selectEntry(entry.id));
+  return button;
 }
 
 function renderEditor() {
@@ -212,7 +220,6 @@ function renderEditor() {
     els.emptyState.classList.remove("hidden");
     return;
   }
-
   els.emptyState.classList.add("hidden");
   els.entryForm.classList.remove("hidden");
   els.formType.textContent = entry.type === "note" ? "Notiz" : "Passwort";
@@ -224,29 +231,18 @@ function renderEditor() {
   els.passwordInput.value = entry.password || "";
   els.notesInput.value = entry.notes || "";
   els.saveState.textContent = "";
+  updateStrengthMeter(entry.password || "");
 }
 
-function render() {
-  renderList();
-  renderEditor();
-}
-
-function selectEntry(id) {
-  state.activeId = id;
-  render();
-}
+function render() { renderList(); renderEditor(); }
+function selectEntry(id) { state.activeId = id; render(); }
 
 function createEntry(type) {
   const entry = {
-    id: uid(),
-    type,
+    id: uid(), type,
     title: type === "note" ? "Neue Notiz" : "Neues Passwort",
-    username: "",
-    url: "",
-    password: "",
-    notes: "",
-    createdAt: now(),
-    updatedAt: now(),
+    username: "", url: "", password: "", notes: "",
+    createdAt: now(), updatedAt: now(),
   };
   state.vault.entries.push(entry);
   state.activeId = entry.id;
@@ -257,9 +253,7 @@ async function saveAndRender(message = "Gespeichert.") {
   await encryptVault();
   render();
   els.saveState.textContent = message;
-  window.setTimeout(() => {
-    if (els.saveState.textContent === message) els.saveState.textContent = "";
-  }, 1800);
+  window.setTimeout(() => { if (els.saveState.textContent === message) els.saveState.textContent = ""; }, 1800);
 }
 
 function fillActiveEntryFromForm() {
@@ -280,7 +274,7 @@ function generatePassword(length, symbolsEnabled) {
   const symbols = "!@#$%&*?-_+=";
   const pool = letters + digits + (symbolsEnabled ? symbols : "");
   const bytes = crypto.getRandomValues(new Uint32Array(length));
-  return Array.from(bytes, (value) => pool[value % pool.length]).join("");
+  return Array.from(bytes, (v) => pool[v % pool.length]).join("");
 }
 
 function download(filename, text) {
@@ -293,6 +287,7 @@ function download(filename, text) {
   URL.revokeObjectURL(url);
 }
 
+// ── LOCK / UNLOCK ──
 function setUnlocked() {
   els.lockScreen.classList.add("hidden");
   els.vaultScreen.classList.remove("hidden");
@@ -303,11 +298,8 @@ function setUnlocked() {
 }
 
 function lock() {
-  state.key = null;
-  state.salt = null;
-  state.vault = { entries: [] };
-  state.accountName = "";
-  state.activeId = null;
+  state.key = null; state.salt = null;
+  state.vault = { entries: [] }; state.accountName = ""; state.activeId = null;
   els.vaultScreen.classList.add("hidden");
   els.lockScreen.classList.remove("hidden");
   els.lockMessage.textContent = "";
@@ -322,78 +314,74 @@ function updateLockCopy() {
     ? "Gib deinen Account-Namen und dein Master-Passwort ein, um den Tresor zu entsperren."
     : "Erstelle einen Account mit Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser.";
   els.accountName.placeholder = stored?.accountName || "z. B. Paul";
-  els.unlockButton.textContent = hasVault ? "Entsperren" : "Tresor erstellen";
+  const btn = els.unlockButton;
+  btn.innerHTML = hasVault
+    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Entsperren`
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Tresor erstellen`;
 }
 
-els.unlockForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+// ── EVENTS ──
+els.unlockForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
   const accountName = els.accountName.value.trim();
   const password = els.masterPassword.value;
-  els.lockMessage.textContent = "Einen Moment...";
-
+  els.lockMessage.textContent = "Einen Moment…";
   try {
-    if (!accountName) {
-      els.lockMessage.textContent = "Bitte gib einen Account-Namen ein.";
-      return;
-    }
-
+    if (!accountName) { els.lockMessage.textContent = "Bitte gib einen Account-Namen ein."; return; }
     const stored = getStoredVault();
     if (stored) {
       if (stored.accountName && stored.accountName.toLowerCase() !== accountName.toLowerCase()) {
-        els.lockMessage.textContent = "Dieser Account-Name passt nicht zu diesem Tresor.";
-        return;
+        els.lockMessage.textContent = "Dieser Account-Name passt nicht zu diesem Tresor."; return;
       }
       const result = await decryptVault(password, stored);
-      state.key = result.key;
-      state.salt = result.salt;
-      state.vault = result.vault;
-      state.accountName = stored.accountName || accountName;
+      state.key = result.key; state.salt = result.salt;
+      state.vault = result.vault; state.accountName = stored.accountName || accountName;
       if (!stored.accountName) await encryptVault();
     } else {
       state.salt = crypto.getRandomValues(new Uint8Array(16));
       state.key = await deriveKey(password, state.salt);
-      state.vault = { entries: [] };
-      state.accountName = accountName;
+      state.vault = { entries: [] }; state.accountName = accountName;
       await encryptVault();
     }
     setUnlocked();
-  } catch (error) {
+  } catch {
     els.lockMessage.textContent = "Master-Passwort stimmt nicht oder Backup ist beschädigt.";
   }
 });
 
-els.toggleMaster.addEventListener("click", () => {
-  els.masterPassword.type = els.masterPassword.type === "password" ? "text" : "password";
-});
+function toggleVisibility(input, btn, iconEl) {
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  btn.innerHTML = show ? EYE_CLOSED : EYE_OPEN;
+}
 
-els.togglePassword.addEventListener("click", () => {
-  els.passwordInput.type = els.passwordInput.type === "password" ? "text" : "password";
-});
+els.toggleMaster.addEventListener("click", () => toggleVisibility(els.masterPassword, els.toggleMaster));
+els.togglePassword.addEventListener("click", () => toggleVisibility(els.passwordInput, els.togglePassword));
 
 els.copyPassword.addEventListener("click", async () => {
   if (!els.passwordInput.value) return;
   await navigator.clipboard.writeText(els.passwordInput.value);
-  els.saveState.textContent = "Passwort kopiert.";
+  els.saveState.textContent = "Passwort kopiert ✓";
+  setTimeout(() => { if (els.saveState.textContent === "Passwort kopiert ✓") els.saveState.textContent = ""; }, 1800);
 });
 
-els.entryForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+els.passwordInput.addEventListener("input", () => updateStrengthMeter(els.passwordInput.value));
+
+els.entryForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
   fillActiveEntryFromForm();
   await saveAndRender();
 });
 
 for (const input of [els.titleInput, els.usernameInput, els.urlInput, els.passwordInput, els.notesInput]) {
-  input.addEventListener("change", async () => {
-    fillActiveEntryFromForm();
-    await saveAndRender();
-  });
+  input.addEventListener("change", async () => { fillActiveEntryFromForm(); await saveAndRender(); });
 }
 
 els.deleteButton.addEventListener("click", async () => {
   const entry = activeEntry();
   if (!entry) return;
   const ok = await openConfirm({
-    title: "Bist du dir sicher?",
+    title: "Eintrag löschen?",
     text: `"${entry.title || "Eintrag"}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`,
   });
   if (!ok) return;
@@ -405,30 +393,26 @@ els.deleteButton.addEventListener("click", async () => {
 els.newPasswordButton.addEventListener("click", () => createEntry("password"));
 els.newNoteButton.addEventListener("click", () => createEntry("note"));
 
-document.querySelectorAll("[data-create]").forEach((button) => {
-  button.addEventListener("click", () => createEntry(button.dataset.create));
+document.querySelectorAll("[data-create]").forEach((btn) => {
+  btn.addEventListener("click", () => createEntry(btn.dataset.create));
 });
 
-document.querySelectorAll(".segment").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".segment").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    state.filter = button.dataset.filter;
+document.querySelectorAll(".segment").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".segment").forEach((s) => s.classList.remove("active"));
+    btn.classList.add("active");
+    state.filter = btn.dataset.filter;
     renderList();
   });
 });
 
-els.searchInput.addEventListener("input", () => {
-  state.search = els.searchInput.value;
-  renderList();
-});
-
-els.lengthInput.addEventListener("input", () => {
-  els.lengthOutput.textContent = els.lengthInput.value;
-});
+els.searchInput.addEventListener("input", () => { state.search = els.searchInput.value; renderList(); });
+els.lengthInput.addEventListener("input", () => { els.lengthOutput.textContent = els.lengthInput.value; });
 
 els.generateButton.addEventListener("click", () => {
-  els.passwordInput.value = generatePassword(Number(els.lengthInput.value), els.symbolsInput.checked);
+  const pw = generatePassword(Number(els.lengthInput.value), els.symbolsInput.checked);
+  els.passwordInput.value = pw;
+  updateStrengthMeter(pw);
   fillActiveEntryFromForm();
   saveAndRender("Passwort generiert.");
 });
@@ -449,7 +433,7 @@ els.importFile.addEventListener("change", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     alert("Backup importiert. Bitte mit dem passenden Master-Passwort neu entsperren.");
     lock();
-  } catch (error) {
+  } catch {
     alert("Diese Datei ist kein gültiges Tresor-Backup.");
   } finally {
     els.importFile.value = "";
@@ -458,45 +442,38 @@ els.importFile.addEventListener("change", async () => {
 
 els.lockButton.addEventListener("click", lock);
 
+// ── CONFIRM MODAL ──
 function openConfirm({ title, text }) {
   els.confirmTitle.textContent = title;
   els.confirmText.textContent = text;
   els.confirmOverlay.classList.remove("hidden");
   els.confirmOverlay.setAttribute("aria-hidden", "false");
   els.confirmCancel.focus();
-
-  return new Promise((resolve) => {
-    state.pendingConfirm = resolve;
-  });
+  return new Promise((resolve) => { state.pendingConfirm = resolve; });
 }
-
 function closeConfirm(result) {
   els.confirmOverlay.classList.add("hidden");
   els.confirmOverlay.setAttribute("aria-hidden", "true");
   if (state.pendingConfirm) state.pendingConfirm(result);
   state.pendingConfirm = null;
 }
-
 els.confirmCancel.addEventListener("click", () => closeConfirm(false));
 els.confirmOk.addEventListener("click", () => closeConfirm(true));
-els.confirmOverlay.addEventListener("click", (event) => {
-  if (event.target === els.confirmOverlay) closeConfirm(false);
-});
+els.confirmOverlay.addEventListener("click", (e) => { if (e.target === els.confirmOverlay) closeConfirm(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.pendingConfirm) closeConfirm(false); });
 
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && state.pendingConfirm) closeConfirm(false);
-});
-
+// ── THEME ──
 function applyTheme(theme) {
-  const nextTheme = theme === "dark" ? "dark" : "light";
-  document.body.dataset.theme = nextTheme;
-  localStorage.setItem(THEME_KEY, nextTheme);
-  els.themeButton.textContent = nextTheme === "dark" ? "Hell" : "Dunkel";
+  const next = theme === "dark" ? "dark" : "light";
+  document.body.dataset.theme = next;
+  localStorage.setItem(THEME_KEY, next);
+  const isDark = next === "dark";
+  els.themeButton.innerHTML = isDark
+    ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Hell`
+    : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Dunkel`;
 }
+els.themeButton.addEventListener("click", () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark"));
 
-els.themeButton.addEventListener("click", () => {
-  applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
-});
-
+// ── INIT ──
 applyTheme(localStorage.getItem(THEME_KEY) || "light");
 updateLockCopy();
