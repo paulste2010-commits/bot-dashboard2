@@ -103,14 +103,10 @@ button { cursor: pointer; border: none; background: none; }
   position: fixed; inset: 0; z-index: 0;
   background: var(--bg-1) var(--mesh-1), var(--mesh-2), var(--mesh-3), var(--mesh-4);
   background-blend-mode: normal;
-  animation: meshFloat 18s ease-in-out infinite alternate;
+  
   pointer-events: none;
 }
-@keyframes meshFloat {
-  0%   { filter: hue-rotate(0deg) brightness(1); }
-  50%  { filter: hue-rotate(15deg) brightness(1.05); }
-  100% { filter: hue-rotate(-10deg) brightness(.97); }
-}
+
 
 .app-shell > * { position: relative; z-index: 1; }
 
@@ -167,7 +163,6 @@ button { cursor: pointer; border: none; background: none; }
 .brand-mark {
   width: 58px; height: 58px; border-radius: 17px;
   background: linear-gradient(135deg, rgba(140,100,255,.8) 0%, rgba(45,212,191,.7) 100%);
-  backdrop-filter: blur(12px);
   display: flex; align-items: center; justify-content: center;
   margin-bottom: 24px;
   box-shadow: 0 8px 28px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35);
@@ -199,8 +194,8 @@ textarea {
   border-radius: var(--radius);
   padding: 10px 14px;
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
+  
+  -webkit-
   color: var(--ink);
   outline: none;
   transition: border-color .2s, box-shadow .2s, background .2s;
@@ -226,7 +221,6 @@ input[type="date"]:focus, textarea:focus {
   background: linear-gradient(135deg, rgba(140,100,255,.85) 0%, rgba(45,212,191,.75) 100%);
   color: #fff;
   box-shadow: 0 4px 20px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   transition: all .2s;
   position: relative; overflow: hidden;
 }
@@ -245,7 +239,7 @@ input[type="date"]:focus, textarea:focus {
   min-height: 38px; border-radius: var(--radius);
   padding: 8px 16px; font-size: .83rem; font-weight: 600;
   white-space: nowrap; transition: all .18s;
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.10);
 }
@@ -273,7 +267,6 @@ input[type="date"]:focus, textarea:focus {
   font-size: .83rem; font-weight: 700; white-space: nowrap;
   background: rgba(255,80,80,.8); color: #fff;
   border: 1px solid rgba(255,120,120,.4);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 4px 16px rgba(255,80,80,.35), inset 0 1px 0 rgba(255,255,255,.25);
   transition: all .18s;
 }
@@ -287,7 +280,7 @@ input[type="date"]:focus, textarea:focus {
   border: 1px solid var(--glass-border);
   color: var(--muted);
   flex-shrink: 0;
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.08);
   transition: all .18s;
 }
@@ -352,7 +345,7 @@ input[type="date"]:focus, textarea:focus {
   display: flex; align-items: center; gap: 5px;
   padding: 4px 11px; border-radius: 999px;
   font-size: .71rem; font-weight: 700;
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   border: 1px solid var(--glass-border);
 }
 .offline-banner    { background: var(--danger-light);  color: var(--danger); }
@@ -364,7 +357,7 @@ input[type="date"]:focus, textarea:focus {
   padding: 10px 20px;
   background: rgba(255,255,255,.03);
   border-bottom: 1px solid var(--glass-border);
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
 }
 
 .search-box {
@@ -373,7 +366,7 @@ input[type="date"]:focus, textarea:focus {
   border: 1px solid var(--glass-border); border-radius: var(--radius);
   padding: 0 13px;
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
   transition: border-color .2s, box-shadow .2s;
 }
@@ -394,7 +387,7 @@ input[type="date"]:focus, textarea:focus {
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 3px;
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,.08);
   gap: 2px;
 }
@@ -418,7 +411,7 @@ input[type="date"]:focus, textarea:focus {
   border: 1px solid var(--glass-border); border-radius: var(--radius);
   padding: 0 11px;
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   min-height: 38px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
 }
@@ -455,7 +448,7 @@ input[type="date"]:focus, textarea:focus {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur-sm); -webkit-backdrop-filter: var(--glass-blur-sm);
+   -webkit-
   padding: 12px 14px;
   cursor: pointer;
   display: grid; gap: 5px;
@@ -496,7 +489,6 @@ input[type="date"]:focus, textarea:focus {
   background: var(--accent-light);
   color: #fff;
   border: 1px solid rgba(140,100,255,.3);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
 }
 .type-pill.note { background: var(--teal-light); border-color: rgba(45,212,191,.3); }
 .type-pill svg  { width: 9px; height: 9px; }
@@ -578,7 +570,6 @@ input[type="date"]:focus, textarea:focus {
   position:fixed; inset:0; z-index:50;
   display:flex; align-items:center; justify-content:center; padding:24px;
   background:rgba(0,0,0,.55);
-  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   animation:fadeIn .18s ease;
 }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -659,3 +650,84 @@ input[type="date"]:focus, textarea:focus {
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
 }
+
+/* ── GPU ACCELERATION ── */
+.topbar, .lock-screen, .confirm-modal, .entry-card, .toolbar {
+  will-change: transform;
+  transform: translateZ(0);
+}
+.entry-card { will-change: auto; }
+.app-shell::before { will-change: filter; }
+
+/* ── PERFORMANCE OVERRIDES ── */
+
+/* Mesh: static, no animation */
+.app-shell::before {
+  animation: none;
+}
+
+/* Cards: no blur, just semi-transparent bg — visually same, 10x faster */
+.entry-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.07);
+  will-change: auto;
+}
+.entry-card:hover  { background: rgba(255,255,255,.11); }
+.entry-card.active { background: rgba(255,255,255,.14); }
+
+/* Buttons: no blur */
+.secondary-button, .ghost-button, .danger-button, .danger-solid-button, .icon-button {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Inputs: no blur */
+input:not([type="checkbox"]):not([type="range"]):not([type="file"]):not([type="date"]),
+input[type="date"], textarea {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(255,255,255,.08);
+}
+
+/* Pills, tags, small things: no blur */
+.type-pill, .tag-pill, .sort-box, .search-box,
+.offline-banner, .autlock-indicator, .generator,
+.pw-history-row, .pw-history-item, .segmented,
+.toast, .toast-undo-btn, .segment.active {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Toasts: solid-ish bg instead */
+.toast {
+  background: rgba(20,24,40,.95);
+}
+
+/* Keep blur ONLY on these 3 important surfaces */
+.lock-screen {
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+}
+.topbar {
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+}
+.confirm-modal {
+  backdrop-filter: blur(32px) saturate(170%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(170%) !important;
+}
+.modal-overlay {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Light mode adjustments */
+body[data-theme="light"] .entry-card         { background: rgba(255,255,255,.55); }
+body[data-theme="light"] .entry-card:hover   { background: rgba(255,255,255,.70); }
+body[data-theme="light"] .entry-card.active  { background: rgba(255,255,255,.80); }
+body[data-theme="light"] input:not([type="checkbox"]):not([type="range"]):not([type="file"]):not([type="date"]),
+body[data-theme="light"] textarea            { background: rgba(255,255,255,.60); }
+body[data-theme="light"] .toast              { background: rgba(255,255,255,.95); color: var(--ink); }
+body[data-theme="light"] .secondary-button   { background: rgba(140,100,255,.15); }
+body[data-theme="light"] .ghost-button       { background: rgba(255,255,255,.55); }
