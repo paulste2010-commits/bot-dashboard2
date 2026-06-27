@@ -5,122 +5,138 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tresor — Passwörter & Notizen</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F766E' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238C64FF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2' ry='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E">
 </head>
 <body>
-  <main id="app" class="app-shell">
+<main id="app" class="app-shell">
 
-    <!-- LOCK SCREEN -->
-    <section id="lockScreen" class="lock-screen">
-      <div class="brand-mark" aria-hidden="true">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  <!-- LOCK SCREEN -->
+  <section id="lockScreen" class="lock-screen">
+    <div class="brand-mark">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1>Tresor</h1>
+    <p id="lockHint" class="lock-hint">Erstelle ein Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser.</p>
+    <form id="unlockForm" class="unlock-form">
+      <label for="accountName">Account-Name
+        <input id="accountName" type="text" autocomplete="off" minlength="2" maxlength="40" required placeholder="z. B. Paul">
+      </label>
+      <label for="masterPassword">Master-Passwort
+        <div class="password-line">
+          <input id="masterPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Mindestens 8 Zeichen">
+          <button class="icon-button" id="toggleMaster" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </label>
+      <label id="alertEmailLabel" class="hidden" for="alertEmail">Alarm-E-Mail <span style="color:var(--muted);font-weight:400;text-transform:none">(optional — für Einbruchs-Alarm)</span>
+        <input id="alertEmail" type="email" autocomplete="off" placeholder="deine@email.de">
+      </label>
+      <button id="unlockButton" class="primary-button" type="submit" style="margin-top:4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Tresor starten
+      </button>
+      <p id="lockMessage" class="message" role="status"></p>
+    </form>
+  </section>
+
+  <!-- VAULT SCREEN -->
+  <section id="vaultScreen" class="vault-screen hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-brand">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div>
+          <span class="eyebrow">Offline Tresor</span>
+          <h2>Tresor</h2>
+          <p id="accountLabel" class="account-label"></p>
+        </div>
       </div>
-      <h1>Passwörter &amp; Notizen</h1>
-      <p id="lockHint" class="lock-hint">Erstelle ein Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser.</p>
-      <form id="unlockForm" class="unlock-form">
-        <label for="accountName">
-          Account-Name
-          <input id="accountName" type="text" autocomplete="off" minlength="2" maxlength="40" required placeholder="z. B. Paul">
-        </label>
-        <label for="masterPassword">
-          Master-Passwort
-          <div class="password-line">
-            <input id="masterPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="Mindestens 8 Zeichen">
-            <button class="icon-button" id="toggleMaster" type="button" aria-label="Passwort anzeigen">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </label>
-        <button id="unlockButton" class="primary-button" type="submit" style="margin-top:4px;">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Tresor starten
-        </button>
-        <p id="lockMessage" class="message" role="status"></p>
-      </form>
-    </section>
-
-    <!-- VAULT SCREEN -->
-    <section id="vaultScreen" class="vault-screen hidden">
-      <header class="topbar">
-        <div class="topbar-left">
-          <div class="topbar-brand" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </div>
-          <div>
-            <span class="eyebrow">Offline Tresor</span>
-            <h2>Passwörter &amp; Notizen</h2>
-            <p id="accountLabel" class="account-label"></p>
-          </div>
+      <div class="topbar-right">
+        <div id="offlineBanner" class="offline-banner hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          Offline
         </div>
-        <div class="topbar-right">
-          <div id="offlineBanner" class="offline-banner hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-            Offline
-          </div>
-          <div id="autoLockTimer" class="autlock-indicator hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span id="autoLockLabel">10:00</span>
-          </div>
-          <div class="topbar-actions">
-            <button id="themeButton" class="ghost-button" type="button">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-              Dunkel
-            </button>
-            <button id="exportButton" class="ghost-button" type="button">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export
-            </button>
-            <label class="ghost-button import-label" style="cursor:pointer;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Import
-              <input id="importFile" type="file" accept="application/json">
-            </label>
-            <button id="lockButton" class="danger-button" type="button">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
-              Sperren
-            </button>
-          </div>
+        <div id="autoLockTimer" class="autlock-indicator hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="autoLockLabel">10:00</span>
         </div>
-      </header>
+        <div class="topbar-actions">
+          <button id="themeButton" class="ghost-button" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            Dunkel
+          </button>
+          <button id="exportButton" class="ghost-button" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <label class="ghost-button import-label" style="cursor:pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import
+            <input id="importFile" type="file" accept="application/json">
+          </label>
+          <button id="lockButton" class="danger-button" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            Sperren
+          </button>
+        </div>
+      </div>
+    </header>
 
+    <!-- NAV TABS -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="vault" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Tresor
+      </button>
+      <button class="nav-tab" data-tab="files" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Dateien
+      </button>
+      <button class="nav-tab" data-tab="bookmarks" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        Lesezeichen
+      </button>
+      <button class="nav-tab" data-tab="codes" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Codes
+      </button>
+      <button class="nav-tab" data-tab="aliases" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        E-Mail Aliase
+      </button>
+      <button class="nav-tab" data-tab="log" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+        Aktivitäts-Log
+      </button>
+    </nav>
+
+    <!-- ══ TAB: VAULT ══ -->
+    <section id="tabVault" class="tab-content">
       <section class="toolbar">
         <div class="search-box">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="searchInput" type="search" placeholder="Titel, Login oder Webadresse… (Strg+F)">
+          <input id="searchInput" type="search" placeholder="Suchen… (Strg+F)">
         </div>
         <div class="segmented" role="tablist">
           <button class="segment active" type="button" data-filter="all">Alle</button>
           <button class="segment" type="button" data-filter="password">Passwörter</button>
           <button class="segment" type="button" data-filter="note">Notizen</button>
-          <button class="segment" type="button" data-filter="favorite">★ Favoriten</button>
+          <button class="segment" type="button" data-filter="favorite">★</button>
         </div>
         <div class="sort-box">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;color:var(--muted);flex-shrink:0"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          <select id="sortSelect">
-            <option value="updated">Zuletzt bearbeitet</option>
-            <option value="created">Zuletzt erstellt</option>
-            <option value="alpha">A – Z</option>
-          </select>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;color:var(--muted);flex-shrink:0"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          <select id="sortSelect"><option value="updated">Zuletzt bearbeitet</option><option value="created">Zuletzt erstellt</option><option value="alpha">A – Z</option></select>
         </div>
-        <button id="newPasswordButton" class="primary-button" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Passwort
-        </button>
-        <button id="newNoteButton" class="secondary-button" type="button">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Notiz
-        </button>
+        <button id="newPasswordButton" class="primary-button" type="button">+ Passwort</button>
+        <button id="newNoteButton" class="secondary-button" type="button">+ Notiz</button>
       </section>
-
       <section class="workspace">
         <aside class="list-pane">
-          <div class="stats">
-            <strong id="entryCount">0</strong>
-            <span>Einträge</span>
-          </div>
+          <div class="stats"><strong id="entryCount">0</strong><span>Einträge</span></div>
           <div id="entryList" class="entry-list" aria-live="polite"></div>
         </aside>
-
         <section class="editor-pane">
           <form id="entryForm" class="entry-form hidden">
             <div class="form-head">
@@ -129,7 +145,7 @@
                 <h3 id="formTitle">Neuer Eintrag</h3>
                 <span id="formMeta" class="form-meta"></span>
               </div>
-              <div style="display:flex;gap:6px;align-items:center;">
+              <div class="form-head-actions">
                 <button id="favoriteButton" class="icon-button" type="button" title="Favorit">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 </button>
@@ -137,111 +153,68 @@
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 </button>
                 <button id="deleteButton" class="danger-button compact" type="button">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                   Löschen
                 </button>
               </div>
             </div>
-
-            <label>
-              Titel
-              <input id="titleInput" type="text" required maxlength="80" placeholder="z. B. E-Mail, Bank, Server">
-            </label>
-
+            <label>Titel<input id="titleInput" type="text" required maxlength="80" placeholder="z. B. E-Mail, Bank, Server"></label>
             <div id="tagRow" class="tag-row">
               <span class="tag-label">Tags</span>
               <div id="tagList" class="tag-list"></div>
               <button id="addTagButton" class="tag-add-btn" type="button">+ Tag</button>
             </div>
-
             <div id="passwordFields" class="password-fields">
               <div class="two-col">
-                <label>
-                  Benutzername / E-Mail
-                  <input id="usernameInput" type="text" autocomplete="off" placeholder="name@example.com">
-                </label>
-                <label>
-                  Webadresse
-                  <input id="urlInput" type="url" inputmode="url" placeholder="https://...">
-                </label>
+                <label>Benutzername / E-Mail<input id="usernameInput" type="text" autocomplete="off" placeholder="name@example.com"></label>
+                <label>Webadresse<input id="urlInput" type="url" inputmode="url" placeholder="https://..."></label>
               </div>
-
-              <label>
-                Passwort
+              <label>Passwort
                 <div class="password-line">
                   <input id="passwordInput" type="password" autocomplete="new-password" placeholder="Passwort">
-                  <button id="togglePassword" class="icon-button" type="button" title="Anzeigen">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </button>
-                  <button id="copyPassword" class="icon-button" type="button" title="Kopieren">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                  </button>
-                  <button id="breachCheckButton" class="icon-button" type="button" title="Auf Datenleck prüfen">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                  </button>
+                  <button id="togglePassword" class="icon-button" type="button" title="Anzeigen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                  <button id="copyPassword" class="icon-button" type="button" title="Kopieren"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+                  <button id="breachCheckButton" class="icon-button" type="button" title="Datenleck prüfen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
                 </div>
               </label>
-
               <div class="strength-meter" id="strengthMeter" style="display:none">
-                <div class="strength-bars">
-                  <div class="strength-bar" id="sb1"></div>
-                  <div class="strength-bar" id="sb2"></div>
-                  <div class="strength-bar" id="sb3"></div>
-                  <div class="strength-bar" id="sb4"></div>
-                </div>
+                <div class="strength-bars"><div class="strength-bar" id="sb1"></div><div class="strength-bar" id="sb2"></div><div class="strength-bar" id="sb3"></div><div class="strength-bar" id="sb4"></div></div>
                 <span class="strength-label" id="strengthLabel"></span>
               </div>
-
               <div id="pwHistoryRow" class="pw-history-row hidden">
                 <span class="pw-history-label">Letzte Passwörter</span>
                 <div id="pwHistoryList" class="pw-history-list"></div>
               </div>
-
               <div class="generator">
                 <div class="gen-row">
                   <div class="gen-length">
-                    <span style="font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap">Länge</span>
+                    <span>Länge</span>
                     <input id="lengthInput" type="range" min="12" max="40" value="18">
                     <output id="lengthOutput">18</output>
                   </div>
-                  <label class="checkbox">
-                    <input id="symbolsInput" type="checkbox" checked>
-                    Sonderzeichen
-                  </label>
-                  <button id="generateButton" class="secondary-button" type="button" style="white-space:nowrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+                  <label class="checkbox"><input id="symbolsInput" type="checkbox" checked>Sonderzeichen</label>
+                  <button id="generateButton" class="secondary-button" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
                     Generieren
                   </button>
                 </div>
               </div>
-
               <div class="expiry-row">
-                <label class="checkbox">
-                  <input id="expiryEnabled" type="checkbox">
-                  Ablaufdatum
-                </label>
-                <input id="expiryDate" type="date" style="width:auto;min-height:36px;padding:6px 10px;" class="hidden">
+                <label class="checkbox"><input id="expiryEnabled" type="checkbox">Ablaufdatum</label>
+                <input id="expiryDate" type="date" class="hidden">
               </div>
             </div>
-
-            <label>
-              Notiz
-              <textarea id="notesInput" rows="5" placeholder="Alles, was du sicher ablegen willst…"></textarea>
-            </label>
-
+            <label>Notiz<textarea id="notesInput" rows="5" placeholder="Alles, was du sicher ablegen willst…"></textarea></label>
             <div class="form-actions">
               <span id="saveState" class="message"></span>
               <button class="primary-button" type="submit">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Speichern
               </button>
             </div>
           </form>
-
           <div id="emptyState" class="empty-state">
-            <div class="empty-state-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
+            <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
             <h3>Kein Eintrag ausgewählt</h3>
             <p>Lege ein Passwort oder eine Notiz an.</p>
             <div class="empty-actions">
@@ -253,36 +226,136 @@
       </section>
     </section>
 
-    <!-- CONFIRM MODAL -->
-    <section id="confirmOverlay" class="modal-overlay hidden" aria-hidden="true">
-      <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
-        <span class="eyebrow">Bestätigung</span>
-        <h3 id="confirmTitle">Bist du dir sicher?</h3>
-        <p id="confirmText"></p>
-        <div class="modal-actions">
-          <button id="confirmCancel" class="ghost-button" type="button">Abbrechen</button>
-          <button id="confirmOk" class="danger-solid-button" type="button">Ja, löschen</button>
+    <!-- ══ TAB: DATEIEN ══ -->
+    <section id="tabFiles" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>Sicherer Datei-Tresor</h3>
+          <p class="tab-sub">Dateien werden vor dem Speichern mit AES-GCM verschlüsselt. Maximal 10 MB pro Datei.</p>
         </div>
+        <label class="primary-button" style="cursor:pointer;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Datei hinzufügen
+          <input id="fileUploadInput" type="file" multiple style="display:none">
+        </label>
+      </div>
+      <div id="fileList" class="file-grid"></div>
+      <div id="fileEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <h3>Keine Dateien</h3>
+        <p>Lade Dateien hoch — sie werden direkt verschlüsselt gespeichert.</p>
       </div>
     </section>
 
-    <!-- TAG INPUT MODAL -->
-    <section id="tagOverlay" class="modal-overlay hidden" aria-hidden="true">
-      <div class="confirm-modal" role="dialog" aria-modal="true">
-        <span class="eyebrow">Tag hinzufügen</span>
-        <h3>Neuer Tag</h3>
-        <input id="tagInput" type="text" maxlength="20" placeholder="z. B. Gaming, Arbeit, Bank">
-        <div class="modal-actions">
-          <button id="tagCancel" class="ghost-button" type="button">Abbrechen</button>
-          <button id="tagOk" class="primary-button" type="button">Hinzufügen</button>
+    <!-- ══ TAB: LESEZEICHEN ══ -->
+    <section id="tabBookmarks" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>Geheime Lesezeichen</h3>
+          <p class="tab-sub">URLs die du nicht im Browser speichern willst.</p>
         </div>
+        <button id="newBookmarkButton" class="primary-button" type="button">+ Lesezeichen</button>
+      </div>
+      <div id="bookmarkList" class="simple-list"></div>
+      <div id="bookmarkEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>Keine Lesezeichen</h3>
+        <p>Speichere URLs die du privat halten möchtest.</p>
       </div>
     </section>
 
-    <!-- TOAST -->
-    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
-  </main>
+    <!-- ══ TAB: CODES ══ -->
+    <section id="tabCodes" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>Sicherheitscodes</h3>
+          <p class="tab-sub">PINs, Safe-Codes, Schloss-Kombinationen und andere geheime Zahlen.</p>
+        </div>
+        <button id="newCodeButton" class="primary-button" type="button">+ Code</button>
+      </div>
+      <div id="codeList" class="simple-list"></div>
+      <div id="codeEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <h3>Keine Codes</h3>
+        <p>Speichere PINs, Safe-Codes und andere Geheim-Kombinationen.</p>
+      </div>
+    </section>
 
-  <script src="app.js"></script>
+    <!-- ══ TAB: ALIASE ══ -->
+    <section id="tabAliases" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>E-Mail Aliase</h3>
+          <p class="tab-sub">Welche Wegwerf-E-Mail hast du wo benutzt?</p>
+        </div>
+        <button id="newAliasButton" class="primary-button" type="button">+ Alias</button>
+      </div>
+      <div id="aliasList" class="simple-list"></div>
+      <div id="aliasEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+        <h3>Keine Aliase</h3>
+        <p>Behalte den Überblick über deine Wegwerf-E-Mails.</p>
+      </div>
+    </section>
+
+    <!-- ══ TAB: LOG ══ -->
+    <section id="tabLog" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>Aktivitäts-Log</h3>
+          <p class="tab-sub">Jede Aktion im Tresor wird hier aufgezeichnet — inklusive fehlgeschlagener Entsperrversuche.</p>
+        </div>
+        <button id="clearLogButton" class="danger-button" type="button">Log leeren</button>
+      </div>
+      <div id="logList" class="log-list"></div>
+      <div id="logEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></div>
+        <h3>Noch keine Aktivität</h3>
+        <p>Aktionen erscheinen hier sobald du den Tresor benutzt.</p>
+      </div>
+    </section>
+  </section>
+
+  <!-- MODALS -->
+  <section id="confirmOverlay" class="modal-overlay hidden" aria-hidden="true">
+    <div class="confirm-modal" role="dialog" aria-modal="true">
+      <span class="eyebrow">Bestätigung</span>
+      <h3 id="confirmTitle">Bist du sicher?</h3>
+      <p id="confirmText"></p>
+      <div class="modal-actions">
+        <button id="confirmCancel" class="ghost-button" type="button">Abbrechen</button>
+        <button id="confirmOk" class="danger-solid-button" type="button">Ja, löschen</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tagOverlay" class="modal-overlay hidden" aria-hidden="true">
+    <div class="confirm-modal" role="dialog" aria-modal="true">
+      <span class="eyebrow">Tag hinzufügen</span>
+      <h3>Neuer Tag</h3>
+      <input id="tagInput" type="text" maxlength="20" placeholder="z. B. Gaming, Arbeit, Bank">
+      <div class="modal-actions">
+        <button id="tagCancel" class="ghost-button" type="button">Abbrechen</button>
+        <button id="tagOk" class="primary-button" type="button">Hinzufügen</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Generic Quick-Add Modal -->
+  <section id="quickAddOverlay" class="modal-overlay hidden" aria-hidden="true">
+    <div class="confirm-modal" role="dialog" aria-modal="true" style="gap:14px;">
+      <span class="eyebrow" id="qaEyebrow">Neu</span>
+      <h3 id="qaTitle">Neuer Eintrag</h3>
+      <div id="qaFields" style="display:grid;gap:10px;"></div>
+      <div class="modal-actions">
+        <button id="qaCancel" class="ghost-button" type="button">Abbrechen</button>
+        <button id="qaOk" class="primary-button" type="button">Speichern</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+</main>
+<script src="app.js"></script>
 </body>
 </html>
