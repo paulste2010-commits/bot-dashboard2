@@ -34,7 +34,6 @@ const els = {
   lockScreen:$("lockScreen"), vaultScreen:$("vaultScreen"),
   lockHeading:$("lockHeading"), lockHint:$("lockHint"), lockMessage:$("lockMessage"),
   unlockForm:$("unlockForm"), accountName:$("accountName"), accountNameLabel:$("accountNameLabel"),
-  emailInput:$("emailInput"),
   masterPassword:$("masterPassword"), toggleMaster:$("toggleMaster"),
   confirmPassword:$("confirmPassword"), confirmPasswordLabel:$("confirmPasswordLabel"),
   modeLoginBtn:$("modeLoginBtn"), modeRegisterBtn:$("modeRegisterBtn"),
@@ -887,8 +886,8 @@ function setAuthMode(mode) {
   els.confirmPasswordLabel.classList.toggle("hidden", mode!=="register");
   setText(els.lockHeading, mode==="register" ? "Konto erstellen" : "Willkommen zurück");
   setText(els.lockHint, mode==="register"
-    ? "Erstelle ein Konto mit deiner E-Mail-Adresse und einem Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser gespeichert."
-    : "Melde dich mit deiner E-Mail-Adresse und deinem Master-Passwort an.");
+    ? "Erstelle ein Konto mit einem Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser gespeichert."
+    : "Gib dein Master-Passwort ein, um den Tresor zu öffnen.");
   setHTML(els.unlockButton, mode==="register"
     ? `${SVG.lockClosed}<span>Konto erstellen</span>`
     : `${SVG.lockOpen}<span>Anmelden</span>`);
@@ -897,20 +896,13 @@ function setAuthMode(mode) {
 els.modeLoginBtn.addEventListener("click",()=>setAuthMode("login"));
 els.modeRegisterBtn.addEventListener("click",()=>setAuthMode("register"));
 
-// Beim Verlassen des E-Mail-Felds automatisch erkennen ob ein Konto existiert
-els.emailInput.addEventListener("blur",()=>{
-  const email=els.emailInput.value.trim();
-  if(!email) return;
-  const exists=Boolean(findAccount(email));
-  setAuthMode(exists?"login":"register");
-  if(els.qrSection) els.qrSection.style.display = exists ? "" : "none";
-});
+
 
 function setUnlocked() {
   els.lockScreen.classList.add("hidden");
   els.vaultScreen.classList.remove("hidden");
-  setText(els.accountLabel, S.accountName?`Angemeldet als ${S.accountName} (${S.email})`:"");
-  els.emailInput.value=""; els.accountName.value=""; els.masterPassword.value=""; els.confirmPassword.value="";
+  setText(els.accountLabel, S.accountName ? `Angemeldet als ${S.accountName}` : "");
+  els.accountName.value=""; els.masterPassword.value=""; els.confirmPassword.value="";
   updateOnline();
   startAutoLock();
   const lastId=localStorage.getItem(LAST_ID_KEY);
@@ -929,7 +921,7 @@ function lock() {
   els.lockScreen.classList.remove("hidden");
   setText(els.lockMessage,"");
   updateLockCopy();
-  els.emailInput.focus();
+  els.masterPassword.focus();
 }
 
 function updateLockCopy() {
@@ -943,18 +935,16 @@ function updateLockCopy() {
 // ══════════════════════════════════════════════
 els.unlockForm.addEventListener("submit", async e=>{
   e.preventDefault();
-  const email=els.emailInput.value.trim();
   const accountName=els.accountName.value.trim();
   const password=els.masterPassword.value;
   const confirmPassword=els.confirmPassword.value;
   setText(els.lockMessage,"Einen Moment…");
   els.unlockButton.disabled=true;
+  const LOCAL_KEY = "tresor-vault-v1:lokal";
   try {
-    if(!email){ setText(els.lockMessage,"Bitte gib deine E-Mail-Adresse ein."); return; }
-
     if(authMode==="register"){
-      if(findAccount(email)){
-        setText(els.lockMessage,"Für diese E-Mail existiert bereits ein Konto. Bitte melde dich an.");
+      if(localStorage.getItem(LOCAL_KEY)){
+        setText(els.lockMessage,"Ein Konto existiert bereits. Bitte melde dich an.");
         return;
       }
       if(password.length<8){ setText(els.lockMessage,"Master-Passwort muss mindestens 8 Zeichen haben."); return; }
@@ -963,31 +953,25 @@ els.unlockForm.addEventListener("submit", async e=>{
       S.salt=crypto.getRandomValues(new Uint8Array(16));
       S.key=await deriveKey(password,S.salt);
       S.vault={entries:[],files:[],bookmarks:[],codes:[],scripts:[]};
-      S.email=email.toLowerCase();
-      S.accountName=accountName||email.split("@")[0];
-      S.storageKey=vaultKeyFor(email);
+      S.email="lokal";
+      S.accountName=accountName||"Tresor";
+      S.storageKey=LOCAL_KEY;
       await encryptVault();
-      saveAccounts([...getAccounts(),{email:S.email,accountName:S.accountName,createdAt:now()}]);
-      addLog("Konto erstellt",S.email,"success");
+      saveAccounts([{email:"lokal",accountName:S.accountName,createdAt:now()}]);
+      addLog("Konto erstellt",S.accountName,"success");
       setUnlocked();
     } else {
-      const account=findAccount(email);
-      if(!account){
-        setText(els.lockMessage,"Kein Konto mit dieser E-Mail gefunden. Bitte registriere dich zuerst.");
-        addLog("Fehlgeschlagener Login",`Unbekannte E-Mail: ${email}`,"error");
-        return;
-      }
-      const stored=getStoredVault(email);
+      const stored=getStoredVault("lokal");
       if(!stored){
-        setText(els.lockMessage,"Kontodaten beschädigt oder nicht gefunden.");
+        setText(els.lockMessage,"Kein Konto gefunden. Bitte registriere dich zuerst.");
         return;
       }
       try {
         const r=await decryptVault(password,stored);
         S.key=r.key; S.salt=r.salt; S.vault=r.vault;
-        S.email=email.toLowerCase();
-        S.accountName=stored.accountName||account.accountName||email.split("@")[0];
-        S.storageKey=vaultKeyFor(email);
+        S.email="lokal";
+        S.accountName=stored.accountName||"Tresor";
+        S.storageKey=LOCAL_KEY;
       } catch {
         setText(els.lockMessage,"Master-Passwort stimmt nicht oder Konto ist beschädigt.");
         addLog("Fehlgeschlagener Login","Falsches Master-Passwort","error");
@@ -1200,12 +1184,7 @@ els.qrToggle && els.qrToggle.addEventListener("click", async () => {
   const isOpen = box.classList.contains("open");
   if (isOpen) { box.classList.remove("open"); return; }
 
-  const typedEmail = els.emailInput.value.trim();
-  if (!typedEmail || !findAccount(typedEmail)) {
-    toast("Bitte gib zuerst die E-Mail eines bestehenden Kontos ein.", "warning");
-    return;
-  }
-  const stored = localStorage.getItem(vaultKeyFor(typedEmail));
+  const stored = localStorage.getItem("tresor-vault-v1:lokal");
   if (!stored) { toast("Kein Konto zum Übertragen gefunden.", "warning"); return; }
 
   // Check size — QR codes can hold ~2-3KB max reliably
