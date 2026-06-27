@@ -17,9 +17,9 @@ const DEC = new TextDecoder();
 // ── STATE ──
 const S = {
   key: null, salt: null,
-  vault: { entries: [], files: [], bookmarks: [], codes: [], aliases: [], scripts: [] },
+  vault: { entries: [], files: [], bookmarks: [], codes: [], scripts: [] },
   email: "", storageKey: null,
-  accountName: "", alertEmail: "",
+  accountName: "",
   activeId: null,
   filter: "all", search: "", sort: "updated",
   activeTab: "vault",
@@ -72,7 +72,6 @@ const els = {
   fileUploadInput:$("fileUploadInput"),fileList:$("fileList"),fileEmpty:$("fileEmpty"),
   bookmarkList:$("bookmarkList"),bookmarkEmpty:$("bookmarkEmpty"),newBookmarkButton:$("newBookmarkButton"),
   codeList:$("codeList"),codeEmpty:$("codeEmpty"),newCodeButton:$("newCodeButton"),
-  aliasList:$("aliasList"),aliasEmpty:$("aliasEmpty"),newAliasButton:$("newAliasButton"),
   scriptList:$("scriptList"),scriptEmpty:$("scriptEmpty"),newScriptButton:$("newScriptButton"),
   logList:$("logList"),logEmpty:$("logEmpty"),clearLogButton:$("clearLogButton"),
   quickAddOverlay:$("quickAddOverlay"),qaEyebrow:$("qaEyebrow"),
@@ -151,7 +150,7 @@ async function encryptVault() {
   const iv  = crypto.getRandomValues(new Uint8Array(12));
   const enc = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, S.key, ENC.encode(JSON.stringify(S.vault)));
   localStorage.setItem(S.storageKey, JSON.stringify({
-    version:3, email:S.email, accountName:S.accountName, alertEmail:S.alertEmail,
+    version:3, email:S.email, accountName:S.accountName,
     salt:b64(S.salt), iv:b64(iv), data:b64(enc),
     updatedAt:new Date().toISOString(),
   }));
@@ -216,16 +215,6 @@ function addLog(action, detail="", level="info") {
   if (S.activeTab === "log") renderLog();
 }
 
-// ── ALARM EMAIL (via mailto — no backend needed) ──
-function triggerAlarm(reason) {
-  if (!S.alertEmail) return;
-  const subject = encodeURIComponent("⚠️ Tresor Alarm: " + reason);
-  const body    = encodeURIComponent(
-    `Alarm-Zeitpunkt: ${new Date().toLocaleString("de-DE")}\nGrund: ${reason}\n\nFalls du das nicht warst, ändere dein Master-Passwort sofort.`
-  );
-  window.open(`mailto:${S.alertEmail}?subject=${subject}&body=${body}`, "_blank");
-}
-
 // ── TOAST ──
 function toast(msg, type="info", duration=3000) {
   const icons = {
@@ -278,7 +267,7 @@ async function checkBreach(pw) {
       const count = parseInt(match.split(":")[1],10);
       toast(`Dieses Passwort wurde ${count.toLocaleString("de-DE")}× in Datenlecks gefunden!`,"error",7000);
       addLog("Breach-Check","Passwort kompromittiert gefunden","error");
-      triggerAlarm("Kompromittiertes Passwort gefunden");
+
     } else {
       toast("Passwort nicht in Datenlecks gefunden.","success",4000);
       addLog("Breach-Check","Sauber","info");
@@ -756,61 +745,6 @@ els.newCodeButton.addEventListener("click",async()=>{
   toast("Code gespeichert.","success");
 });
 
-// ══════════════════════════════════════════════
-//  ALIASES
-// ══════════════════════════════════════════════
-function renderAliases() {
-  const list=S.vault.aliases||[];
-  els.aliasEmpty.classList.toggle("hidden",list.length>0);
-  els.aliasList.innerHTML="";
-  list.slice().reverse().forEach(a=>{
-    const row=el("div",{cls:"simple-row"});
-    const info=el("div",{cls:"simple-info"});
-    const badge=el("span",{cls:"alias-badge"});
-    const statusText = a.active!==false?"Aktiv":"Deaktiviert";
-    badge.textContent=statusText;
-    badge.className="alias-badge "+(a.active!==false?"active":"inactive");
-    info.append(
-      el("strong",{text:a.alias}),
-      el("span",{cls:"simple-sub",text:`Benutzt bei: ${a.service||"Unbekannt"}`}),
-      badge,
-      a.note?el("span",{cls:"simple-note",text:a.note}):null,
-    );
-    const actions=el("div",{cls:"simple-actions"});
-    const copyBtn=el("button",{cls:"ghost-button compact",text:"Kopieren",type:"button"});
-    copyBtn.addEventListener("click",()=>{ navigator.clipboard.writeText(a.alias); toast("Alias kopiert.","success"); });
-    const toggleBtn=el("button",{cls:"secondary-button compact",type:"button"});
-    toggleBtn.textContent=a.active!==false?"Deaktivieren":"Aktivieren";
-    toggleBtn.addEventListener("click",async()=>{
-      a.active=!(a.active!==false);
-      await encryptVault(); renderAliases(); addLog("Alias geändert",a.alias);
-    });
-    const rmBtn=el("button",{cls:"danger-button compact",text:"Löschen",type:"button"});
-    rmBtn.addEventListener("click",async()=>{
-      const ok=await openConfirm({title:"Alias löschen?",text:`"${a.alias}" löschen?`});
-      if(!ok) return;
-      S.vault.aliases=S.vault.aliases.filter(x=>x.id!==a.id);
-      await encryptVault(); renderAliases(); addLog("Alias gelöscht",a.alias);
-      toast("Alias gelöscht.","success");
-    });
-    actions.append(copyBtn,toggleBtn,rmBtn);
-    row.append(info,actions);
-    els.aliasList.append(row);
-  });
-}
-
-els.newAliasButton.addEventListener("click",async()=>{
-  const r=await openQA({ eyebrow:"E-Mail Aliase", title:"Neuer Alias", fields:[
-    {key:"alias",label:"Alias E-Mail",type:"email",placeholder:"alias@simplelogin.io"},
-    {key:"service",label:"Benutzt bei Service",placeholder:"z. B. Reddit, Amazon"},
-    {key:"note",label:"Notiz (optional)",placeholder:"Weitere Infos…"},
-  ]});
-  if(!r||!r.alias) return;
-  S.vault.aliases=S.vault.aliases||[];
-  S.vault.aliases.push({id:uid(),alias:r.alias,service:r.service,note:r.note,active:true,addedAt:now()});
-  await encryptVault(); renderAliases(); addLog("Alias hinzugefügt",r.alias);
-  toast("Alias gespeichert.","success");
-});
 
 // ══════════════════════════════════════════════
 //  SCRIPTS
@@ -935,7 +869,6 @@ document.querySelectorAll(".nav-tab").forEach(btn=>{
     if(tab==="files")     renderFiles();
     if(tab==="bookmarks") renderBookmarks();
     if(tab==="codes")     renderCodes();
-    if(tab==="aliases")   renderAliases();
     if(tab==="scripts")   renderScripts();
     if(tab==="log")       renderLog();
   });
@@ -983,15 +916,15 @@ function setUnlocked() {
   const lastId=localStorage.getItem(LAST_ID_KEY);
   if(lastId && S.vault.entries.find(e=>e.id===lastId)) S.activeId=lastId;
   // ensure sub-lists exist
-  ["files","bookmarks","codes","aliases","scripts"].forEach(k=>{ if(!S.vault[k]) S.vault[k]=[]; });
+  ["files","bookmarks","codes","scripts"].forEach(k=>{ if(!S.vault[k]) S.vault[k]=[]; });
   render();
   addLog("Angemeldet",S.email,"success");
 }
 
 function lock() {
   stopAutoLock(); clearInterval(S.clipboardTimer);
-  S.key=null; S.salt=null; S.vault={entries:[],files:[],bookmarks:[],codes:[],aliases:[],scripts:[]};
-  S.email=""; S.storageKey=null; S.accountName=""; S.alertEmail=""; S.activeId=null;
+  S.key=null; S.salt=null; S.vault={entries:[],files:[],bookmarks:[],codes:[],scripts:[]};
+  S.email=""; S.storageKey=null; S.accountName=""; S.activeId=null;
   els.vaultScreen.classList.add("hidden");
   els.lockScreen.classList.remove("hidden");
   setText(els.lockMessage,"");
@@ -1029,10 +962,9 @@ els.unlockForm.addEventListener("submit", async e=>{
 
       S.salt=crypto.getRandomValues(new Uint8Array(16));
       S.key=await deriveKey(password,S.salt);
-      S.vault={entries:[],files:[],bookmarks:[],codes:[],aliases:[],scripts:[]};
+      S.vault={entries:[],files:[],bookmarks:[],codes:[],scripts:[]};
       S.email=email.toLowerCase();
       S.accountName=accountName||email.split("@")[0];
-      S.alertEmail=email;
       S.storageKey=vaultKeyFor(email);
       await encryptVault();
       saveAccounts([...getAccounts(),{email:S.email,accountName:S.accountName,createdAt:now()}]);
@@ -1055,12 +987,10 @@ els.unlockForm.addEventListener("submit", async e=>{
         S.key=r.key; S.salt=r.salt; S.vault=r.vault;
         S.email=email.toLowerCase();
         S.accountName=stored.accountName||account.accountName||email.split("@")[0];
-        S.alertEmail=stored.alertEmail||email;
         S.storageKey=vaultKeyFor(email);
       } catch {
         setText(els.lockMessage,"Master-Passwort stimmt nicht oder Konto ist beschädigt.");
         addLog("Fehlgeschlagener Login","Falsches Master-Passwort","error");
-        triggerAlarm("Fehlgeschlagener Login-Versuch mit falschem Passwort");
         return;
       }
       setUnlocked();
