@@ -4,8 +4,7 @@
 //            never via innerHTML
 // ══════════════════════════════════════════════
 
-const STORAGE_KEY_LEGACY = "passwort-notizen-tresor-v2"; // alte Single-Account-Speicherung (nur für Migration)
-const ACCOUNTS_KEY  = "tresor-accounts-index-v1";
+const STORAGE_KEY   = "passwort-notizen-tresor-v2";
 const THEME_KEY     = "passwort-notizen-theme";
 const LAST_ID_KEY   = "passwort-notizen-last-id";
 const LOG_KEY       = "passwort-notizen-log";
@@ -17,9 +16,8 @@ const DEC = new TextDecoder();
 // ── STATE ──
 const S = {
   key: null, salt: null,
-  vault: { entries: [], files: [], bookmarks: [], codes: [], scripts: [] },
-  email: "", storageKey: null,
-  accountName: "",
+  vault: { entries: [], files: [], bookmarks: [], codes: [], aliases: [] },
+  accountName: "", alertEmail: "",
   activeId: null,
   filter: "all", search: "", sort: "updated",
   activeTab: "vault",
@@ -32,13 +30,11 @@ const $ = id => document.getElementById(id);
 
 const els = {
   lockScreen:$("lockScreen"), vaultScreen:$("vaultScreen"),
-  lockHeading:$("lockHeading"), lockHint:$("lockHint"), lockMessage:$("lockMessage"),
-  unlockForm:$("unlockForm"), accountName:$("accountName"), accountNameLabel:$("accountNameLabel"),
+  lockHint:$("lockHint"), lockMessage:$("lockMessage"),
+  unlockForm:$("unlockForm"), accountName:$("accountName"),
   masterPassword:$("masterPassword"), toggleMaster:$("toggleMaster"),
-  confirmPassword:$("confirmPassword"), confirmPasswordLabel:$("confirmPasswordLabel"),
-  modeLoginBtn:$("modeLoginBtn"), modeRegisterBtn:$("modeRegisterBtn"),
-  unlockButton:$("unlockButton"),
-  accountLabel:$("accountLabel"),
+  unlockButton:$("unlockButton"), alertEmailLabel:$("alertEmailLabel"),
+  alertEmail:$("alertEmail"), accountLabel:$("accountLabel"),
   themeButton:$("themeButton"), exportButton:$("exportButton"),
   importFile:$("importFile"), lockButton:$("lockButton"),
   searchInput:$("searchInput"), sortSelect:$("sortSelect"),
@@ -71,12 +67,10 @@ const els = {
   fileUploadInput:$("fileUploadInput"),fileList:$("fileList"),fileEmpty:$("fileEmpty"),
   bookmarkList:$("bookmarkList"),bookmarkEmpty:$("bookmarkEmpty"),newBookmarkButton:$("newBookmarkButton"),
   codeList:$("codeList"),codeEmpty:$("codeEmpty"),newCodeButton:$("newCodeButton"),
-  scriptList:$("scriptList"),scriptEmpty:$("scriptEmpty"),newScriptButton:$("newScriptButton"),
+  aliasList:$("aliasList"),aliasEmpty:$("aliasEmpty"),newAliasButton:$("newAliasButton"),
   logList:$("logList"),logEmpty:$("logEmpty"),clearLogButton:$("clearLogButton"),
   quickAddOverlay:$("quickAddOverlay"),qaEyebrow:$("qaEyebrow"),
   qaTitle:$("qaTitle"),qaFields:$("qaFields"),qaCancel:$("qaCancel"),qaOk:$("qaOk"),
-  // QR transfer
-  qrSection:$("qrSection"),qrToggle:$("qrToggle"),qrBox:$("qrBox"),qrCanvas:$("qrCanvas"),
 };
 
 // ── SVG ICONS (static strings — no user data) ──
@@ -108,32 +102,9 @@ function el(tag, attrs = {}, children = []) {
   return node;
 }
 
-// ── ACCOUNTS (Multi-Konto, identifiziert per E-Mail) ──
-function vaultKeyFor(email) { return "tresor-vault-v1:" + email.trim().toLowerCase(); }
-function getAccounts() {
-  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "[]"); } catch { return []; }
-}
-function saveAccounts(list) { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list)); }
-function findAccount(email) {
-  const e = email.trim().toLowerCase();
-  return getAccounts().find(a => a.email.toLowerCase() === e) || null;
-}
-// Migriert eine evtl. vorhandene alte Single-Account-Installation (vor dem Login-System)
-function migrateLegacyVaultIfNeeded() {
-  if (getAccounts().length) return;
-  const legacy = localStorage.getItem(STORAGE_KEY_LEGACY);
-  if (!legacy) return;
-  try {
-    const parsed = JSON.parse(legacy);
-    const email = "konto@lokal.tresor";
-    localStorage.setItem(vaultKeyFor(email), legacy);
-    saveAccounts([{ email, accountName: parsed.accountName || "Konto", createdAt: now() }]);
-  } catch { /* ungültiges altes Format — ignorieren */ }
-}
-
 // ── CRYPTO ──
-function getStoredVault(email) {
-  try { const r = localStorage.getItem(vaultKeyFor(email)); return r ? JSON.parse(r) : null; } catch { return null; }
+function getStoredVault() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
 }
 function b64(bytes)  { return btoa(String.fromCharCode(...new Uint8Array(bytes))); }
 function unb64(s)    { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
@@ -148,8 +119,8 @@ async function deriveKey(password, salt) {
 async function encryptVault() {
   const iv  = crypto.getRandomValues(new Uint8Array(12));
   const enc = await crypto.subtle.encrypt({ name:"AES-GCM", iv }, S.key, ENC.encode(JSON.stringify(S.vault)));
-  localStorage.setItem(S.storageKey, JSON.stringify({
-    version:3, email:S.email, accountName:S.accountName,
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    version:2, accountName:S.accountName, alertEmail:S.alertEmail,
     salt:b64(S.salt), iv:b64(iv), data:b64(enc),
     updatedAt:new Date().toISOString(),
   }));
@@ -214,6 +185,16 @@ function addLog(action, detail="", level="info") {
   if (S.activeTab === "log") renderLog();
 }
 
+// ── ALARM EMAIL (via mailto — no backend needed) ──
+function triggerAlarm(reason) {
+  if (!S.alertEmail) return;
+  const subject = encodeURIComponent("⚠️ Tresor Alarm: " + reason);
+  const body    = encodeURIComponent(
+    `Alarm-Zeitpunkt: ${new Date().toLocaleString("de-DE")}\nGrund: ${reason}\n\nFalls du das nicht warst, ändere dein Master-Passwort sofort.`
+  );
+  window.open(`mailto:${S.alertEmail}?subject=${subject}&body=${body}`, "_blank");
+}
+
 // ── TOAST ──
 function toast(msg, type="info", duration=3000) {
   const icons = {
@@ -266,7 +247,7 @@ async function checkBreach(pw) {
       const count = parseInt(match.split(":")[1],10);
       toast(`Dieses Passwort wurde ${count.toLocaleString("de-DE")}× in Datenlecks gefunden!`,"error",7000);
       addLog("Breach-Check","Passwort kompromittiert gefunden","error");
-
+      triggerAlarm("Kompromittiertes Passwort gefunden");
     } else {
       toast("Passwort nicht in Datenlecks gefunden.","success",4000);
       addLog("Breach-Check","Sauber","info");
@@ -599,9 +580,7 @@ function openQA({ eyebrow, title, fields }) {
   fields.forEach(f=>{
     const wrap = el("label",{cls:"qa-label"});
     const lbl  = document.createTextNode(f.label);
-    const input = f.type==="textarea"
-      ? el("textarea",{id:"qa_"+f.key,placeholder:f.placeholder||"",rows:String(f.rows||6),cls:f.mono?"mono-field":""})
-      : el("input",{type:f.type||"text",placeholder:f.placeholder||"",id:"qa_"+f.key,autocomplete:"off"});
+    const input = el("input",{type:f.type||"text",placeholder:f.placeholder||"",id:"qa_"+f.key,autocomplete:"off"});
     if(f.value) input.value=f.value;
     wrap.append(lbl,input);
     els.qaFields.append(wrap);
@@ -611,7 +590,7 @@ function openQA({ eyebrow, title, fields }) {
     }
   });
   els.quickAddOverlay.classList.remove("hidden");
-  setTimeout(()=>els.qaFields.querySelector("input,textarea")?.focus(),50);
+  setTimeout(()=>els.qaFields.querySelector("input")?.focus(),50);
   return new Promise(r=>{S.pendingQA=r;});
 }
 function closeQA(ok) {
@@ -619,7 +598,7 @@ function closeQA(ok) {
   if(!S.pendingQA) return;
   if(!ok){ S.pendingQA(null); S.pendingQA=null; return; }
   const result={};
-  els.qaFields.querySelectorAll("input,textarea").forEach(i=>{ result[i.id.replace("qa_","")] = i.value.trim(); });
+  els.qaFields.querySelectorAll("input").forEach(i=>{ result[i.id.replace("qa_","")] = i.value.trim(); });
   S.pendingQA(result); S.pendingQA=null;
 }
 els.qaCancel.addEventListener("click",()=>closeQA(false));
@@ -744,86 +723,60 @@ els.newCodeButton.addEventListener("click",async()=>{
   toast("Code gespeichert.","success");
 });
 
-
 // ══════════════════════════════════════════════
-//  SCRIPTS
+//  ALIASES
 // ══════════════════════════════════════════════
-function extForLanguage(lang) {
-  const l=(lang||"").trim().toLowerCase();
-  const map = {
-    javascript:".js", js:".js", typescript:".ts", ts:".ts",
-    python:".py", py:".py", bash:".sh", shell:".sh", sh:".sh",
-    powershell:".ps1", sql:".sql", html:".html", css:".css",
-    json:".json", yaml:".yml", yml:".yml", php:".php", go:".go",
-    rust:".rs", java:".java", c:".c", "c++":".cpp", cpp:".cpp",
-    ruby:".rb",
-  };
-  return map[l] || ".txt";
-}
-
-function renderScripts() {
-  const list=S.vault.scripts||[];
-  els.scriptEmpty.classList.toggle("hidden",list.length>0);
-  els.scriptList.innerHTML="";
-  list.slice().reverse().forEach(s=>{
-    const row=el("div",{cls:"simple-row script-row"});
+function renderAliases() {
+  const list=S.vault.aliases||[];
+  els.aliasEmpty.classList.toggle("hidden",list.length>0);
+  els.aliasList.innerHTML="";
+  list.slice().reverse().forEach(a=>{
+    const row=el("div",{cls:"simple-row"});
     const info=el("div",{cls:"simple-info"});
-
-    const pre=el("pre",{cls:"script-preview"});
-    pre.textContent="••• Inhalt versteckt — auf 'Anzeigen' klicken •••";
-    pre.dataset.visible="0";
-    pre.dataset.content=s.content; // im DOM nur als data-Attribut, nie via innerHTML
-
+    const badge=el("span",{cls:"alias-badge"});
+    const statusText = a.active!==false?"Aktiv":"Deaktiviert";
+    badge.textContent=statusText;
+    badge.className="alias-badge "+(a.active!==false?"active":"inactive");
     info.append(
-      el("strong",{text:s.title||"Unbenanntes Skript"}),
-      el("span",{cls:"simple-sub",text:s.language||"Skript"}),
-      pre,
-      s.note?el("span",{cls:"simple-note",text:s.note}):null,
+      el("strong",{text:a.alias}),
+      el("span",{cls:"simple-sub",text:`Benutzt bei: ${a.service||"Unbekannt"}`}),
+      badge,
+      a.note?el("span",{cls:"simple-note",text:a.note}):null,
     );
-
     const actions=el("div",{cls:"simple-actions"});
-    const showBtn=el("button",{cls:"secondary-button compact",text:"Anzeigen",type:"button"});
-    showBtn.addEventListener("click",()=>{
-      const vis=pre.dataset.visible==="1";
-      pre.textContent = vis ? "••• Inhalt versteckt — auf 'Anzeigen' klicken •••" : pre.dataset.content;
-      pre.dataset.visible = vis?"0":"1";
-      setText(showBtn, vis?"Anzeigen":"Verstecken");
-    });
     const copyBtn=el("button",{cls:"ghost-button compact",text:"Kopieren",type:"button"});
-    copyBtn.addEventListener("click",()=>{ navigator.clipboard.writeText(s.content); toast("Skript kopiert.","success"); addLog("Skript kopiert",s.title||""); });
-    const dlBtn=el("button",{cls:"ghost-button compact",text:"Download",type:"button"});
-    dlBtn.addEventListener("click",()=>{
-      const ext=extForLanguage(s.language);
-      const safeName=(s.title||"skript").replace(/[^a-z0-9_\-]+/gi,"_").slice(0,60)||"skript";
-      download(`${safeName}${ext}`, s.content);
-      addLog("Skript heruntergeladen",s.title||"");
+    copyBtn.addEventListener("click",()=>{ navigator.clipboard.writeText(a.alias); toast("Alias kopiert.","success"); });
+    const toggleBtn=el("button",{cls:"secondary-button compact",type:"button"});
+    toggleBtn.textContent=a.active!==false?"Deaktivieren":"Aktivieren";
+    toggleBtn.addEventListener("click",async()=>{
+      a.active=!(a.active!==false);
+      await encryptVault(); renderAliases(); addLog("Alias geändert",a.alias);
     });
     const rmBtn=el("button",{cls:"danger-button compact",text:"Löschen",type:"button"});
     rmBtn.addEventListener("click",async()=>{
-      const ok=await openConfirm({title:"Skript löschen?",text:`"${s.title||"Skript"}" löschen?`});
+      const ok=await openConfirm({title:"Alias löschen?",text:`"${a.alias}" löschen?`});
       if(!ok) return;
-      S.vault.scripts=S.vault.scripts.filter(x=>x.id!==s.id);
-      await encryptVault(); renderScripts(); addLog("Skript gelöscht",s.title||"");
-      toast("Skript gelöscht.","success");
+      S.vault.aliases=S.vault.aliases.filter(x=>x.id!==a.id);
+      await encryptVault(); renderAliases(); addLog("Alias gelöscht",a.alias);
+      toast("Alias gelöscht.","success");
     });
-    actions.append(showBtn,copyBtn,dlBtn,rmBtn);
+    actions.append(copyBtn,toggleBtn,rmBtn);
     row.append(info,actions);
-    els.scriptList.append(row);
+    els.aliasList.append(row);
   });
 }
 
-els.newScriptButton.addEventListener("click",async()=>{
-  const r=await openQA({ eyebrow:"Skripte", title:"Neues Skript speichern", fields:[
-    {key:"title",label:"Titel",placeholder:"z. B. Backup-Script, Deploy-Befehl"},
-    {key:"language",label:"Sprache (optional)",placeholder:"z. B. Bash, Python, JavaScript, SQL"},
-    {key:"content",label:"Skript-Inhalt",type:"textarea",rows:10,mono:true,placeholder:"#!/bin/bash\necho \"Hallo Welt\""},
-    {key:"note",label:"Notiz (optional)",placeholder:"Wofür ist das Skript?"},
+els.newAliasButton.addEventListener("click",async()=>{
+  const r=await openQA({ eyebrow:"E-Mail Aliase", title:"Neuer Alias", fields:[
+    {key:"alias",label:"Alias E-Mail",type:"email",placeholder:"alias@simplelogin.io"},
+    {key:"service",label:"Benutzt bei Service",placeholder:"z. B. Reddit, Amazon"},
+    {key:"note",label:"Notiz (optional)",placeholder:"Weitere Infos…"},
   ]});
-  if(!r||!r.content) return;
-  S.vault.scripts=S.vault.scripts||[];
-  S.vault.scripts.push({id:uid(),title:r.title||"Unbenanntes Skript",language:r.language,content:r.content,note:r.note,addedAt:now()});
-  await encryptVault(); renderScripts(); addLog("Skript gespeichert",r.title||"");
-  toast("Skript gespeichert.","success");
+  if(!r||!r.alias) return;
+  S.vault.aliases=S.vault.aliases||[];
+  S.vault.aliases.push({id:uid(),alias:r.alias,service:r.service,note:r.note,active:true,addedAt:now()});
+  await encryptVault(); renderAliases(); addLog("Alias hinzugefügt",r.alias);
+  toast("Alias gespeichert.","success");
 });
 
 // ══════════════════════════════════════════════
@@ -868,55 +821,33 @@ document.querySelectorAll(".nav-tab").forEach(btn=>{
     if(tab==="files")     renderFiles();
     if(tab==="bookmarks") renderBookmarks();
     if(tab==="codes")     renderCodes();
-    if(tab==="scripts")   renderScripts();
+    if(tab==="aliases")   renderAliases();
     if(tab==="log")       renderLog();
   });
 });
 
 // ══════════════════════════════════════════════
-//  LOCK / UNLOCK / KONTEN
+//  LOCK / UNLOCK
 // ══════════════════════════════════════════════
-let authMode = "login";
-
-function setAuthMode(mode) {
-  authMode = mode;
-  els.modeLoginBtn.classList.toggle("active", mode==="login");
-  els.modeRegisterBtn.classList.toggle("active", mode==="register");
-  els.accountNameLabel.classList.toggle("hidden", mode!=="register");
-  els.confirmPasswordLabel.classList.toggle("hidden", mode!=="register");
-  setText(els.lockHeading, mode==="register" ? "Konto erstellen" : "Willkommen zurück");
-  setText(els.lockHint, mode==="register"
-    ? "Erstelle ein Konto mit einem Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser gespeichert."
-    : "Gib dein Master-Passwort ein, um den Tresor zu öffnen.");
-  setHTML(els.unlockButton, mode==="register"
-    ? `${SVG.lockClosed}<span>Konto erstellen</span>`
-    : `${SVG.lockOpen}<span>Anmelden</span>`);
-  setText(els.lockMessage,"");
-}
-els.modeLoginBtn.addEventListener("click",()=>setAuthMode("login"));
-els.modeRegisterBtn.addEventListener("click",()=>setAuthMode("register"));
-
-
-
 function setUnlocked() {
   els.lockScreen.classList.add("hidden");
   els.vaultScreen.classList.remove("hidden");
-  setText(els.accountLabel, S.accountName ? `Angemeldet als ${S.accountName}` : "");
-  els.accountName.value=""; els.masterPassword.value=""; els.confirmPassword.value="";
+  setText(els.accountLabel, S.accountName?`Angemeldet als ${S.accountName}`:"");
+  els.accountName.value=""; els.masterPassword.value="";
   updateOnline();
   startAutoLock();
   const lastId=localStorage.getItem(LAST_ID_KEY);
   if(lastId && S.vault.entries.find(e=>e.id===lastId)) S.activeId=lastId;
   // ensure sub-lists exist
-  ["files","bookmarks","codes","scripts"].forEach(k=>{ if(!S.vault[k]) S.vault[k]=[]; });
+  ["files","bookmarks","codes","aliases"].forEach(k=>{ if(!S.vault[k]) S.vault[k]=[]; });
   render();
-  addLog("Angemeldet",S.email,"success");
+  addLog("Entsperrt",S.accountName,"success");
 }
 
 function lock() {
   stopAutoLock(); clearInterval(S.clipboardTimer);
-  S.key=null; S.salt=null; S.vault={entries:[],files:[],bookmarks:[],codes:[],scripts:[]};
-  S.email=""; S.storageKey=null; S.accountName=""; S.activeId=null;
+  S.key=null; S.salt=null; S.vault={entries:[],files:[],bookmarks:[],codes:[],aliases:[]};
+  S.accountName=""; S.alertEmail=""; S.activeId=null;
   els.vaultScreen.classList.add("hidden");
   els.lockScreen.classList.remove("hidden");
   setText(els.lockMessage,"");
@@ -925,9 +856,18 @@ function lock() {
 }
 
 function updateLockCopy() {
-  const accounts=getAccounts();
-  setAuthMode(accounts.length ? "login" : "register");
-  if(els.qrSection) els.qrSection.style.display="none";
+  const stored=getStoredVault(); const has=Boolean(stored);
+  setText(els.lockHeading, has ? "Willkommen zurück" : "Tresor erstellen");
+  setText(els.lockHint, has
+    ? "Gib deinen Account-Namen und dein Master-Passwort ein, um den Tresor zu entsperren."
+    : "Erstelle einen Account mit Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser.");
+  els.accountName.placeholder = stored?.accountName||"z. B. Paul";
+  els.alertEmailLabel.classList.toggle("hidden", has);
+  setHTML(els.unlockButton, has
+    ? `${SVG.lockOpen}<span>Entsperren</span>`
+    : `${SVG.lockClosed}<span>Tresor erstellen</span>`);
+  // Show QR transfer only if vault exists
+  if(els.qrSection) els.qrSection.style.display = has ? "" : "none";
 }
 
 // ══════════════════════════════════════════════
@@ -937,48 +877,39 @@ els.unlockForm.addEventListener("submit", async e=>{
   e.preventDefault();
   const accountName=els.accountName.value.trim();
   const password=els.masterPassword.value;
-  const confirmPassword=els.confirmPassword.value;
   setText(els.lockMessage,"Einen Moment…");
   els.unlockButton.disabled=true;
-  const LOCAL_KEY = "tresor-vault-v1:lokal";
   try {
-    if(authMode==="register"){
-      if(localStorage.getItem(LOCAL_KEY)){
-        setText(els.lockMessage,"Ein Konto existiert bereits. Bitte melde dich an.");
-        return;
-      }
-      if(password.length<8){ setText(els.lockMessage,"Master-Passwort muss mindestens 8 Zeichen haben."); return; }
-      if(password!==confirmPassword){ setText(els.lockMessage,"Die Passwörter stimmen nicht überein."); return; }
-
-      S.salt=crypto.getRandomValues(new Uint8Array(16));
-      S.key=await deriveKey(password,S.salt);
-      S.vault={entries:[],files:[],bookmarks:[],codes:[],scripts:[]};
-      S.email="lokal";
-      S.accountName=accountName||"Tresor";
-      S.storageKey=LOCAL_KEY;
-      await encryptVault();
-      saveAccounts([{email:"lokal",accountName:S.accountName,createdAt:now()}]);
-      addLog("Konto erstellt",S.accountName,"success");
-      setUnlocked();
-    } else {
-      const stored=getStoredVault("lokal");
-      if(!stored){
-        setText(els.lockMessage,"Kein Konto gefunden. Bitte registriere dich zuerst.");
+    if(!accountName){ setText(els.lockMessage,"Bitte gib einen Account-Namen ein."); return; }
+    const stored=getStoredVault();
+    if(stored){
+      if(stored.accountName && stored.accountName.toLowerCase()!==accountName.toLowerCase()){
+        setText(els.lockMessage,"Dieser Account-Name passt nicht zu diesem Tresor.");
+        addLog("Fehlgeschlagener Login",`Falscher Account-Name: ${accountName}`,"error");
+        triggerAlarm("Fehlgeschlagener Login-Versuch");
         return;
       }
       try {
         const r=await decryptVault(password,stored);
         S.key=r.key; S.salt=r.salt; S.vault=r.vault;
-        S.email="lokal";
-        S.accountName=stored.accountName||"Tresor";
-        S.storageKey=LOCAL_KEY;
+        S.accountName=stored.accountName||accountName;
+        S.alertEmail=stored.alertEmail||"";
+        if(!stored.accountName) await encryptVault();
       } catch {
-        setText(els.lockMessage,"Master-Passwort stimmt nicht oder Konto ist beschädigt.");
+        setText(els.lockMessage,"Master-Passwort stimmt nicht oder Backup ist beschädigt.");
         addLog("Fehlgeschlagener Login","Falsches Master-Passwort","error");
+        triggerAlarm("Fehlgeschlagener Login-Versuch mit falschem Passwort");
         return;
       }
-      setUnlocked();
+    } else {
+      S.salt=crypto.getRandomValues(new Uint8Array(16));
+      S.key=await deriveKey(password,S.salt);
+      S.vault={entries:[],files:[],bookmarks:[],codes:[],aliases:[]};
+      S.accountName=accountName;
+      S.alertEmail=els.alertEmail.value.trim();
+      await encryptVault();
     }
+    setUnlocked();
   } finally { els.unlockButton.disabled=false; }
 });
 
@@ -1089,7 +1020,7 @@ els.generateButton.addEventListener("click",()=>{
 });
 
 els.exportButton.addEventListener("click",()=>{
-  const stored=localStorage.getItem(S.storageKey); if(!stored) return;
+  const stored=localStorage.getItem(STORAGE_KEY); if(!stored) return;
   download(`tresor-backup-${new Date().toISOString().slice(0,10)}.json`,stored);
   addLog("Export","Backup erstellt"); toast("Backup exportiert.","success");
 });
@@ -1099,8 +1030,8 @@ els.importFile.addEventListener("change",async()=>{
   try {
     const parsed=JSON.parse(await file.text());
     if(!parsed.salt||!parsed.iv||!parsed.data) throw new Error();
-    localStorage.setItem(S.storageKey,JSON.stringify(parsed));
-    toast("Backup importiert. Bitte neu anmelden.","success",4000);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(parsed));
+    toast("Backup importiert. Bitte neu entsperren.","success",4000);
     addLog("Import","Backup importiert");
     lock();
   } catch { toast("Ungültiges Backup.","error"); }
@@ -1157,7 +1088,6 @@ function applyTheme(t) {
 els.themeButton.addEventListener("click",()=>applyTheme(document.body.dataset.theme==="dark"?"light":"dark"));
 
 // ── INIT ──
-migrateLegacyVaultIfNeeded();
 applyTheme(localStorage.getItem(THEME_KEY)||"dark");
 updateLockCopy();
 updateOnline();
@@ -1184,8 +1114,8 @@ els.qrToggle && els.qrToggle.addEventListener("click", async () => {
   const isOpen = box.classList.contains("open");
   if (isOpen) { box.classList.remove("open"); return; }
 
-  const stored = localStorage.getItem("tresor-vault-v1:lokal");
-  if (!stored) { toast("Kein Konto zum Übertragen gefunden.", "warning"); return; }
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) { toast("Kein Tresor zum Übertragen.", "warning"); return; }
 
   // Check size — QR codes can hold ~2-3KB max reliably
   const bytes = new TextEncoder().encode(stored).length;
