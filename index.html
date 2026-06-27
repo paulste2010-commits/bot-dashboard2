@@ -33,11 +33,19 @@
       </div>
 
       <h1 id="lockHeading" style="margin:0 0 6px;font-size:1.6rem">Willkommen zurück</h1>
-      <p id="lockHint" class="lock-hint">Erstelle ein Master-Passwort. Deine Daten bleiben verschlüsselt in diesem Browser.</p>
+      <p id="lockHint" class="lock-hint">Melde dich mit deiner E-Mail und deinem Master-Passwort an.</p>
+
+      <div class="segmented" id="authToggle" style="margin-bottom:18px;">
+        <button class="segment active" type="button" data-mode="login" id="modeLoginBtn">Anmelden</button>
+        <button class="segment" type="button" data-mode="register" id="modeRegisterBtn">Registrieren</button>
+      </div>
 
       <form id="unlockForm" class="unlock-form">
-        <label for="accountName">Account-Name
-          <input id="accountName" type="text" autocomplete="off" minlength="2" maxlength="40" required placeholder="z. B. Paul">
+        <label id="accountNameLabel" class="hidden" for="accountName">Anzeigename <span style="color:var(--muted);font-weight:400;text-transform:none">(optional)</span>
+          <input id="accountName" type="text" autocomplete="off" minlength="2" maxlength="40" placeholder="z. B. Paul">
+        </label>
+        <label for="emailInput">E-Mail
+          <input id="emailInput" type="email" autocomplete="username" required placeholder="deine@email.de">
         </label>
         <label for="masterPassword">Master-Passwort
           <div class="password-line" style="grid-template-columns:1fr auto">
@@ -47,11 +55,11 @@
             </button>
           </div>
         </label>
-        <label id="alertEmailLabel" class="hidden" for="alertEmail">Alarm-E-Mail <span style="color:var(--muted);font-weight:400;text-transform:none">(optional)</span>
-          <input id="alertEmail" type="email" autocomplete="off" placeholder="deine@email.de">
+        <label id="confirmPasswordLabel" class="hidden" for="confirmPassword">Passwort wiederholen
+          <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Master-Passwort wiederholen">
         </label>
         <button id="unlockButton" class="primary-button" type="submit" style="margin-top:4px;width:100%;">
-          Tresor starten
+          Anmelden
         </button>
         <p id="lockMessage" class="message" role="status"></p>
       </form>
@@ -135,6 +143,10 @@
       <button class="nav-tab" data-tab="aliases" type="button">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
         E-Mail Aliase
+      </button>
+      <button class="nav-tab" data-tab="scripts" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Skripte
       </button>
       <button class="nav-tab" data-tab="log" type="button">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
@@ -325,6 +337,23 @@
         <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
         <h3>Keine Aliase</h3>
         <p>Behalte den Überblick über deine Wegwerf-E-Mails.</p>
+      </div>
+    </section>
+
+    <!-- ══ TAB: SKRIPTE ══ -->
+    <section id="tabScripts" class="tab-content hidden">
+      <div class="tab-header">
+        <div>
+          <h3>Skripte</h3>
+          <p class="tab-sub">Code-Schnipsel, Shell-Befehle oder Konfigurationen sicher verschlüsselt ablegen.</p>
+        </div>
+        <button id="newScriptButton" class="primary-button" type="button">+ Skript</button>
+      </div>
+      <div id="scriptList" class="simple-list"></div>
+      <div id="scriptEmpty" class="empty-state">
+        <div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+        <h3>Keine Skripte</h3>
+        <p>Speichere Code-Schnipsel oder Befehle, die du sicher aufbewahren willst.</p>
       </div>
     </section>
 
